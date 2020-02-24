@@ -63,3 +63,12 @@ JSR-330规范
 - 成员变量上方或构造方法参数前 -> 连锁注入
 - 通常用来指定注入对象为接口时，初始化的对应类
   
+Cai2yy
+---
+https://github.com/cai2yy
+- ArmOT: 边缘计算IOT软件+数据上云web端管理平台
+> https://github.com/cai2yy/armot
+- CJHttp: 基于netty实现的轻便web框架（http）
+> https://github.com/cai2yy/cjhttp
+- CJIoc：多功能的轻量级IOC框架
+> https://github.com/cai2yy/cjioc
