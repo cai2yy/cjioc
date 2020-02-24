@@ -1,4 +1,4 @@
-JCIoc
+CJIoc
 --
 通过JDK反射和注解机制实现的简单IOC框架
 - IOC自动注入
