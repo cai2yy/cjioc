@@ -6,6 +6,10 @@ JCIoc
 - 对单例和命名单例对象的全局缓存
 - 可用来实现MVC框架或辅助开发简化代码逻辑
 
+完整的MVC框架案例：
+- armiot: https://github.com/cai2yy/armot
+    >一个轻便的IOT管理和控制平台
+
 功能
 ---
 1. 通过注解(如@Inject)完成参数的自动注入
