@@ -29,15 +29,18 @@ public class Injector {
 		injector = this;
 	}
 
+	// Cache of singleton and named singleton
 	private Map<Class<?>, Object> singletonInstances = Collections.synchronizedMap(new HashMap<>());
 	{
 		singletonInstances.put(Injector.class, this);
 	}
 	private Map<Class<?>, Map<Annotation, Object>> qualifiedInstances = Collections.synchronizedMap(new HashMap<>());
 
+	// registry, prepare for initiation
 	private Map<Class<?>, Class<?>> singletonClasses = Collections.synchronizedMap(new HashMap<>());
 	private Map<Class<?>, Map<Annotation, Class<?>>> qualifiedClasses = Collections.synchronizedMap(new HashMap<>());
 
+	// sentry for circle injection
 	private Set<Class<?>> readyClasses = Collections.synchronizedSet(new HashSet<>());
 
 	public static Injector getInjector() {
