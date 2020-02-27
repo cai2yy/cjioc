@@ -9,6 +9,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -24,28 +25,16 @@ import java.util.function.Consumer;
  */
 public class Injector {
 
-	public static Injector injector;
-	{
-		injector = this;
-	}
-
-	// Cache of singleton and named singleton
-	private Map<Class<?>, Object> singletonInstances = Collections.synchronizedMap(new HashMap<>());
+	private Map<Class<?>, Object> singletonInstances = new ConcurrentHashMap<>();
+	private Map<Class<?>, Map<Annotation, Object>> qualifiedInstances = new ConcurrentHashMap<>();
 	{
 		singletonInstances.put(Injector.class, this);
 	}
-	private Map<Class<?>, Map<Annotation, Object>> qualifiedInstances = Collections.synchronizedMap(new HashMap<>());
 
-	// registry, prepare for initiation
-	private Map<Class<?>, Class<?>> singletonClasses = Collections.synchronizedMap(new HashMap<>());
-	private Map<Class<?>, Map<Annotation, Class<?>>> qualifiedClasses = Collections.synchronizedMap(new HashMap<>());
+	private Map<Class<?>, Class<?>> singletonClasses = new ConcurrentHashMap<>();
+	private Map<Class<?>, Map<Annotation, Class<?>>> qualifiedClasses = new ConcurrentHashMap<>();
 
-	// sentry for circle injection
-	private Set<Class<?>> readyClasses = Collections.synchronizedSet(new HashSet<>());
-
-	public static Injector getInjector() {
-		return injector;
-	}
+	private Set<Class<?>> readyClasses = ConcurrentHashMap.newKeySet();
 
 	/**
 	 * default construction
@@ -102,7 +91,7 @@ public class Injector {
 	 * @param obj a instance for putting in qualifiedInstances Dict
 	 * @return this
 	 */
-	public <T> Injector putSingleton(Class clazz, T obj) {
+	public <T> Injector putSingleton(Class<T> clazz, T obj) {
 		if (singletonInstances.put(clazz, obj) != null) {
 			throw new InjectException("duplicated singleton object for the same class " + clazz.getCanonicalName());
 		}
@@ -124,7 +113,7 @@ public class Injector {
 		}
 		var os = qualifiedInstances.get(clazz);
 		if (os == null) {
-			os = Collections.synchronizedMap(new HashMap<>());
+			os = new ConcurrentHashMap<>();
 			qualifiedInstances.put(clazz, os);
 		}
 		if (os.put(annotation, obj) != null) {
@@ -187,7 +176,7 @@ public class Injector {
 		}
 		var annos = qualifiedClasses.get(parentType);
 		if (annos == null) {
-			annos = Collections.synchronizedMap(new HashMap<>());
+			annos = new ConcurrentHashMap<>();
 			qualifiedClasses.put(parentType, annos);
 		}
 		if (annos.put(annotation, clazz) != null) {
@@ -448,9 +437,5 @@ public class Injector {
 		return createNew(clazz);
 	}
 
-	@Override
-	public String toString() {
-		return "this is a Singleton Injector";
-	}
 
 }
