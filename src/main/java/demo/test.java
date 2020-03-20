@@ -3,6 +3,7 @@ package demo;
 import javax.inject.Named;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,5 +36,13 @@ public class test {
         set.add(annos1[0]);
         set.add(annos2[0]);
         System.out.println(set.size());
+
+        HashMap<Integer, Integer> map = new HashMap<>();
+        System.out.println(map.containsKey(5));
+        System.out.println(map.get(5) == null);
+        map.put(5, null);
+        System.out.println(map.containsKey(5));
+        System.out.println(map.get(5) == null);
+
     }
 }

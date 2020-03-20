@@ -34,7 +34,7 @@ public class Injector {
 	private Map<Class<?>, Class<?>> singletonClasses = new ConcurrentHashMap<>();
 	private Map<Class<?>, Map<Annotation, Class<?>>> qualifiedClasses = new ConcurrentHashMap<>();
 
-	private Set<Class<?>> readyClasses = ConcurrentHashMap.newKeySet();
+	private Map<Class<?>, Object> earlyInstances = new ConcurrentHashMap<>();
 
 	/**
 	 * default construction
@@ -292,11 +292,11 @@ public class Injector {
 		if (cons.size() == 0) {
 			throw new InjectException("no accessible constructor for injection class " + clazz.getCanonicalName());
 		}
-		readyClasses.add(clazz); // 放入表示未完成的容器
+		earlyInstances.put(clazz, clazz); // 早期对象尚未创建
 
 		target = createFromConstructor(cons.get(0)); // -> 核心步骤，构造器注入
 
-		readyClasses.remove(clazz); // 从未完成的容器取出
+		earlyInstances.put(clazz, target); // 早期对象创建成功
 
 		// 2. 创建完成，判断是否为Singleton
 		var isSingleton = clazz.isAnnotationPresent(Singleton.class);
@@ -310,6 +310,8 @@ public class Injector {
 		// 3. 递归注入该类中带@Inject注解的属性
 		injectMembers(target);
 
+		earlyInstances.remove(clazz);
+
 		return target;
 	}
 
@@ -322,13 +324,21 @@ public class Injector {
 		var params = new Object[constructor.getParameterCount()];
 		var i = 0;
 		for (Parameter parameter : constructor.getParameters()) {
+			Object param = null;
 			if (parameter.getClass().isInterface()) {
 				throw new InjectException(String.format("can not create instance form Interface, the root class is %s",constructor.getDeclaringClass().getCanonicalName()));
 			}
-			if (readyClasses.contains(parameter.getType()) ){
+			// 循环依赖对象尚未构建早期引用，此处循环依赖无法解决
+			if (earlyInstances.get(parameter.getType()) == parameter.getType()) {
 				throw new InjectException(String.format("circular dependency on constructor , the root class is %s",constructor.getDeclaringClass().getCanonicalName()));
 			}
-			var param = createFromParameter(parameter);
+			// 循环依赖对象已经构建早期对象
+			if (earlyInstances.containsKey(parameter.getType())) {
+				param = earlyInstances.get(parameter.getType());
+			}
+			else {
+				param = createFromParameter(parameter);
+			}
 			params[i++] = param;
 		}
 		try {
@@ -397,17 +407,25 @@ public class Injector {
 						namedAnnotation = annotation;
 					}
 				}
+				// 0. 若循环依赖，先把构建好的早期对象引用赋予
+				Object obj = earlyInstances.get(clazz);
+				if (obj == clazz) {
+					throw new InjectException("circle dependent from constructor param" +
+							instance.getClass().getSimpleName() + " asking for" + clazz.getSimpleName() + "in building");
+				}
 				// 1. 尝试从singletonInstances队列中获取
-				Object obj = singletonInstances.get(clazz);
 				if (obj == null) {
-					// 2. 尝试从qualifiedInstances队列中获取
+					obj = singletonInstances.get(clazz);
+				}
+				// 2. 尝试从qualifiedInstances队列中获取
+				if (obj == null) {
 					Map<Annotation, Object> objectMap = qualifiedInstances.get(clazz);
 					if (objectMap != null) {
 						obj = objectMap.get(namedAnnotation);
 					}
 				}
+				// 3. 都没有，重新创建一个
 				if (obj == null) {
-					// 3. 都没有，重新创建一个
 					obj = createFromField(field);
 				}
 				// 将生成的实例放入singletonInstances队列
